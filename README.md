@@ -64,13 +64,15 @@ python -m unittest discover -s tests -v
 ## Your work
 
 - Complete [assessment/TASK.md](assessment/TASK.md).
-- Implement validate.py, failure_test.py, backup.sh and restore.sh, or documented equivalents.
-  Placeholders deliberately exit 2; they are unfinished deliverables, not validation evidence.
-- Create .github/workflows/ci.yml yourself.
-- Complete the root report templates and docs/EVIDENCE_INDEX.md.
-- Add architecture.png or architecture.pdf.
-- Replace this README with copyable setup/build/run/test/failure/backup/restore/cleanup commands.
-- Commit as you work. Do not commit real secrets, backups, virtual environments or challenge state.
+- Implemented operational validation with `scripts/validate.sh`.
+- Implemented backend failure/recovery testing with `failure_test.py`.
+- Implemented PostgreSQL backup and restore with `scripts/backup.sh` and `scripts/restore.sh`.
+- Added GitHub Actions CI in `.github/workflows/ci.yml`.
+- Runtime secrets are supplied through `.env` and are not copied into application images.
+- PostgreSQL and Redis use named volumes for persistence.
+- Complete the root report templates and `docs/EVIDENCE_INDEX.md`.
+- Add `architecture.png` or `architecture.pdf`.
+- Keep backups, `.env`, virtual environments and challenge state out of Git.
 
 ## Recorded challenge
 
@@ -92,6 +94,47 @@ Do not use docker compose down to reset the runtime challenge.
 
 ## Stop safely
 
-Outside the recorded challenge, docker compose -p barq-assessment down stops this lab.
-Do not use --volumes during persistence tests. Avoid global Docker prune/cleanup commands.
-Back up anything you need before removing containers; investigate whether data actually persists.
+Outside the recorded challenge, `docker compose -p barq-assessment down` stops this lab.
+
+Do not use `--volumes` during persistence tests because the PostgreSQL and Redis named
+volumes contain persistent state. Avoid global Docker prune/cleanup commands.
+
+Back up anything you need before removing containers; investigate whether data actually
+persists.
+
+## Persistence test
+
+
+Create a record:
+
+```bash
+curl -s -X POST \
+  -H 'Content-Type: application/json' \
+  -d '{"title":"Persistence after container recreation"}' \
+  http://127.0.0.1:8080/records
+```
+
+Verify the record:
+
+```bash
+curl -s http://127.0.0.1:8080/records
+```
+
+Recreate the application and PostgreSQL containers while keeping the volumes:
+
+```bash
+docker compose up -d --force-recreate app-01 app-02 postgres
+```
+
+Verify the services are healthy:
+
+```bash
+docker compose ps
+```
+
+Verify the record survived container recreation:
+
+```bash
+curl -s http://127.0.0.1:8080/records
+```
+
