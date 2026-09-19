@@ -9,7 +9,7 @@ fail() {
 }
 
 echo "== Container status =="
-docker compose -p barq-assessment ps
+docker compose ps
 
 echo
 echo "== Required endpoints =="
