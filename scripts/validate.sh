@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-BASE_URL="${BASE_URL:-http://127.0.0.1:8080}"
+BASE_URL="${BASE_URL:-http://127.0.0.1:8090}"
 
 fail() {
     echo "FAIL: $1" >&2
@@ -24,7 +24,7 @@ done
 echo
 echo "== Instance identity =="
 
-instances=$(for i in {1..10}; do
+instances=$(for i in {1..15}; do
     curl -s "$BASE_URL/instance"
 done | python3 -c '
 import sys, json
@@ -36,8 +36,10 @@ echo "$instances"
 
 instance_count=$(printf '%s\n' "$instances" | grep -c . || true)
 
-[[ "$instance_count" -ge 2 ]] || fail "Expected traffic from at least two instances"
-
+[[ "$instance_count" -ge 3 ]] || fail "Expected traffic from at least three instances"
+for expected in app-01 app-02 app-03; do
+    echo "$instances" | grep -qx "$expected" || fail "$expected did not receive traffic"
+done
 echo
 echo "== Database =="
 
@@ -70,14 +72,14 @@ ports=$(docker ps --format '{{.Names}}\t{{.Ports}}')
 
 echo "$ports"
 
-if echo "$ports" | grep -E 'postgres.*0\.0\.0\.0|redis.*0\.0\.0\.0|app-01.*0\.0\.0\.0|app-02.*0\.0\.0\.0'; then
+if echo "$ports" | grep -E 'postgres.*0\.0\.0\.0|redis.*0\.0\.0\.0|app-01.*0\.0\.0\.0|app-02.*0\.0\.0\.0|app-03.*0\.0\.0\.0'; then
     fail "Internal service exposed on host port"
 fi
 
 echo
 echo "== Security =="
 
-for container in app-01 app-02; do
+for container in app-01 app-02 app-03; do
     user=$(docker inspect "$container" --format '{{.Config.User}}')
     readonly=$(docker inspect "$container" --format '{{.HostConfig.ReadonlyRootfs}}')
 
